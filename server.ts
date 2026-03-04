@@ -127,6 +127,29 @@ const app = express();
 app.use(express.json());
 
 // API Routes
+app.get("/api/health", async (req, res) => {
+  try {
+    // Check if admin exists, if not create it
+    const { data: adminUser } = await supabase.from("users").select("id").eq("username", "admin").maybeSingle();
+    if (!adminUser) {
+      console.log("Admin user not found, creating default admin...");
+      await supabase.from("users").insert([{ 
+        username: "admin", 
+        password: "admin123", 
+        role: "admin", 
+        full_name: "System Administrator" 
+      }]);
+    }
+
+    const { data, error } = await supabase.from("users").select("count", { count: 'exact', head: true });
+    if (error) throw error;
+    res.json({ status: "ok", message: "Database connected", userCount: data });
+  } catch (err: any) {
+    console.error("Health check failed:", err);
+    res.status(500).json({ status: "error", message: err.message });
+  }
+});
+
 app.get("/api/users", async (req, res) => {
   const { data, error } = await supabase.from("users").select("id, username, role, full_name");
   if (error) return res.status(500).json(error);
@@ -142,12 +165,31 @@ app.post("/api/users", async (req, res) => {
 
 app.post("/api/login", async (req, res) => {
   const { username, password } = req.body;
-  const { data, error } = await supabase.from("users").select("id, username, role, full_name").eq("username", username).eq("password", password).single();
+  console.log(`Login attempt for user: ${username}`);
   
-  if (data) {
-    res.json({ success: true, user: data });
-  } else {
-    res.status(401).json({ success: false, error: "Invalid username or password" });
+  try {
+    const { data, error } = await supabase
+      .from("users")
+      .select("id, username, role, full_name")
+      .eq("username", username)
+      .eq("password", password)
+      .maybeSingle(); // Use maybeSingle to avoid error if not found
+    
+    if (error) {
+      console.error("Supabase login error:", error);
+      return res.status(500).json({ success: false, error: "Database connection error" });
+    }
+
+    if (data) {
+      console.log(`Login successful for user: ${username}`);
+      res.json({ success: true, user: data });
+    } else {
+      console.log(`Login failed for user: ${username} - Invalid credentials`);
+      res.status(401).json({ success: false, error: "Invalid username or password" });
+    }
+  } catch (err) {
+    console.error("Unexpected login error:", err);
+    res.status(500).json({ success: false, error: "Internal server error" });
   }
 });
 
@@ -193,8 +235,14 @@ app.delete("/api/masters/:type/:id", async (req, res) => {
 });
 
 app.get("/api/settings", async (req, res) => {
-  const { data } = await supabase.from("settings").select("*").eq("id", 1).single();
-  res.json(data);
+  try {
+    const { data, error } = await supabase.from("settings").select("*").eq("id", 1).maybeSingle();
+    if (error) throw error;
+    res.json(data || { company_name: 'DealerFlow', address: '', logo_url: '' });
+  } catch (err) {
+    console.error("Settings fetch error:", err);
+    res.json({ company_name: 'DealerFlow', address: '', logo_url: '' });
+  }
 });
 
 app.post("/api/settings", async (req, res) => {
@@ -204,32 +252,43 @@ app.post("/api/settings", async (req, res) => {
 });
 
 app.get("/api/dashboard/stats", async (req, res) => {
-  const today = new Date().toISOString().split('T')[0];
-  
-  const { data: salesItems } = await supabase.from("operation_items")
-    .select("cartons, pieces, products(unit_price, pieces_per_carton), operations!inner(type, date)")
-    .eq("operations.type", "issue")
-    .eq("operations.date", today);
+  try {
+    const today = new Date().toISOString().split('T')[0];
+    
+    const { data: salesItems, error: salesError } = await supabase.from("operation_items")
+      .select("cartons, pieces, products(unit_price, pieces_per_carton), operations!inner(type, date)")
+      .eq("operations.type", "issue")
+      .eq("operations.date", today);
 
-  const todaySalesTotal = salesItems?.reduce((acc, item: any) => {
-    const p = item.products;
-    return acc + (item.cartons * p.unit_price * p.pieces_per_carton + item.pieces * p.unit_price);
-  }, 0) || 0;
+    if (salesError) console.error("Sales stats error:", salesError);
 
-  const { data: pendingDues } = await supabase.from("dues").select("remaining_amount").eq("status", "pending");
-  const totalDues = pendingDues?.reduce((acc, d) => acc + (d.remaining_amount || 0), 0) || 0;
-  
-  const { data: stockData } = await supabase.from("stock").select("cartons, pieces, products!inner(min_stock_level, pieces_per_carton)");
-  const lowStockCount = stockData?.filter((s: any) => {
-    const totalPieces = (s.cartons * s.products.pieces_per_carton) + s.pieces;
-    return totalPieces < s.products.min_stock_level;
-  }).length || 0;
+    const todaySalesTotal = salesItems?.reduce((acc, item: any) => {
+      const p = item.products;
+      if (!p) return acc;
+      return acc + (item.cartons * p.unit_price * p.pieces_per_carton + item.pieces * p.unit_price);
+    }, 0) || 0;
 
-  res.json({
-    todaySales: todaySalesTotal,
-    totalDues: totalDues,
-    lowStockCount: lowStockCount
-  });
+    const { data: pendingDues, error: duesError } = await supabase.from("dues").select("remaining_amount").eq("status", "pending");
+    if (duesError) console.error("Dues stats error:", duesError);
+    const totalDues = pendingDues?.reduce((acc, d) => acc + (d.remaining_amount || 0), 0) || 0;
+    
+    const { data: stockData, error: stockError } = await supabase.from("stock").select("cartons, pieces, products!inner(min_stock_level, pieces_per_carton)");
+    if (stockError) console.error("Stock stats error:", stockError);
+    const lowStockCount = stockData?.filter((s: any) => {
+      if (!s.products) return false;
+      const totalPieces = (s.cartons * s.products.pieces_per_carton) + s.pieces;
+      return totalPieces < s.products.min_stock_level;
+    }).length || 0;
+
+    res.json({
+      todaySales: todaySalesTotal,
+      totalDues: totalDues,
+      lowStockCount: lowStockCount
+    });
+  } catch (err) {
+    console.error("Dashboard stats error:", err);
+    res.json({ todaySales: 0, totalDues: 0, lowStockCount: 0 });
+  }
 });
 
 app.get("/api/products", async (req, res) => {
