@@ -1,0 +1,5 @@
+{
+  "name": "DealerFlow",
+  "description": "A comprehensive dealership management system for tracking inventory, sales, issues, and returns with role-based access control.",
+  "requestFramePermissions": []
+}
