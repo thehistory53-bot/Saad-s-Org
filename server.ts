@@ -12,6 +12,11 @@ const __dirname = path.dirname(__filename);
 
 const supabaseUrl = process.env.SUPABASE_URL || "";
 const supabaseKey = process.env.SUPABASE_ANON_KEY || process.env.SUPABASE_KEY || "";
+
+if (!supabaseUrl || !supabaseKey) {
+  console.error("CRITICAL ERROR: Missing Supabase environment variables!");
+}
+
 const supabase = createClient(supabaseUrl, supabaseKey);
 
 // Helper to normalize stock (cartons/pieces) and prevent negative values
@@ -131,24 +136,54 @@ export default app;
 // API Routes
 app.get("/api/health", async (req, res) => {
   try {
+    // Check for environment variables first
+    const hasUrl = !!process.env.SUPABASE_URL;
+    const hasKey = !!(process.env.SUPABASE_ANON_KEY || process.env.SUPABASE_KEY);
+
+    if (!hasUrl || !hasKey) {
+      return res.status(500).json({
+        status: "error",
+        message: "Missing Supabase environment variables on server",
+        config: { hasUrl, hasKey }
+      });
+    }
+
     // Check if admin exists, if not create it
-    const { data: adminUser } = await supabase.from("users").select("id").eq("username", "admin").maybeSingle();
+    const { data: adminUser, error: checkError } = await supabase.from("users").select("id").eq("username", "admin").maybeSingle();
+    
+    if (checkError) {
+      return res.status(500).json({
+        status: "error",
+        message: "Database query failed",
+        details: checkError.message
+      });
+    }
+
     if (!adminUser) {
       console.log("Admin user not found, creating default admin...");
-      await supabase.from("users").insert([{ 
+      const { error: insertError } = await supabase.from("users").insert([{ 
         username: "admin", 
         password: "admin123", 
         role: "admin", 
         full_name: "System Administrator" 
       }]);
+      if (insertError) {
+        return res.status(500).json({
+          status: "error",
+          message: "Failed to create admin user",
+          details: insertError.message
+        });
+      }
     }
 
-    const { data, error } = await supabase.from("users").select("count", { count: 'exact', head: true });
-    if (error) throw error;
-    res.json({ status: "ok", message: "Database connected", userCount: data });
+    res.json({ status: "ok", message: "Database connected and admin verified" });
   } catch (err: any) {
     console.error("Health check failed:", err);
-    res.status(500).json({ status: "error", message: err.message });
+    res.status(500).json({ 
+      status: "error", 
+      message: "Unexpected server error",
+      details: err.message 
+    });
   }
 });
 
