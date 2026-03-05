@@ -43,11 +43,11 @@ async function normalizeStock(productId: number | string) {
 /*
 CREATE TABLE settings (
   id INTEGER PRIMARY KEY DEFAULT 1,
-  company_name TEXT DEFAULT 'DealerFlow',
+  company_name TEXT DEFAULT 'Saad Enterprise',
   address TEXT DEFAULT '',
   logo_url TEXT DEFAULT ''
 );
-INSERT INTO settings (id, company_name) VALUES (1, 'DealerFlow') ON CONFLICT (id) DO NOTHING;
+INSERT INTO settings (id, company_name) VALUES (1, 'Saad Enterprise') ON CONFLICT (id) DO NOTHING;
 
 CREATE TABLE users (
   id BIGINT PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
@@ -274,10 +274,10 @@ app.get("/api/settings", async (req, res) => {
   try {
     const { data, error } = await supabase.from("settings").select("*").eq("id", 1).maybeSingle();
     if (error) throw error;
-    res.json(data || { company_name: 'DealerFlow', address: '', logo_url: '' });
+    res.json(data || { company_name: 'Saad Enterprise', address: '', logo_url: '' });
   } catch (err) {
     console.error("Settings fetch error:", err);
-    res.json({ company_name: 'DealerFlow', address: '', logo_url: '' });
+    res.json({ company_name: 'Saad Enterprise', address: '', logo_url: '' });
   }
 });
 

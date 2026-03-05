@@ -466,8 +466,8 @@ const Login = ({ onLogin }: { onLogin: (user: User) => void }) => {
         className="w-full max-w-md"
       >
         <div className="text-center mb-8">
-          <div className="w-16 h-16 bg-gradient-to-br from-indigo-600 to-purple-600 rounded-2xl flex items-center justify-center text-white font-black text-3xl shadow-xl shadow-indigo-200 mx-auto mb-4">D</div>
-          <h1 className="text-3xl font-black text-slate-900 tracking-tight">DealerFlow</h1>
+          <div className="w-16 h-16 bg-gradient-to-br from-indigo-600 to-purple-600 rounded-2xl flex items-center justify-center text-white font-black text-3xl shadow-xl shadow-indigo-200 mx-auto mb-4">S</div>
+          <h1 className="text-3xl font-black text-slate-900 tracking-tight">সাদ এন্টারপ্রাইজ</h1>
         </div>
 
         <Card className="p-8 shadow-2xl border-indigo-50">
@@ -526,7 +526,7 @@ const Login = ({ onLogin }: { onLogin: (user: User) => void }) => {
         </Card>
 
         <p className="text-center mt-8 text-slate-400 text-sm font-medium">
-          © 2024 DealerFlow. All rights reserved. <br />
+          © 2024 Saad Enterprise. All rights reserved. <br />
           Powered by Mahfuzur
         </p>
       </motion.div>
@@ -2003,7 +2003,7 @@ export default function App() {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [showChangePassword, setShowChangePassword] = useState(false);
   const [products, setProducts] = useState<Product[]>([]);
-  const [settings, setSettings] = useState<Settings>({ company_name: 'DealerFlow', address: '', logo_url: '' });
+  const [settings, setSettings] = useState<Settings>({ company_name: 'Saad Enterprise', address: '', logo_url: '' });
   const [masters, setMasters] = useState<MasterData>({ routes: [], srs: [], delivery_boys: [], vans: [] });
   const [stats, setStats] = useState({ todaySales: 0, totalDues: 0, lowStockCount: 0 });
 
