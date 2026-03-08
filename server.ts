@@ -130,8 +130,6 @@ console.log("Supabase client initialized. Please ensure tables are created in th
 const app = express();
 app.use(express.json());
 
-export default app;
-
 // API Routes
 app.get("/api/health", async (req, res) => {
   try {
@@ -703,3 +701,5 @@ if (!process.env.VERCEL) {
     console.log(`Server running on http://0.0.0.0:${PORT}`);
   });
 }
+
+export default app;

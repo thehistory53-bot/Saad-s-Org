@@ -446,6 +446,12 @@ const Login = ({ onLogin }: { onLogin: (user: User) => void }) => {
         body: JSON.stringify({ username, password })
       });
 
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}));
+        setError(errorData.error || `সার্ভার এরর: ${res.status}`);
+        return;
+      }
+
       const data = await res.json();
       if (data.success) {
         onLogin(data.user);
@@ -453,7 +459,8 @@ const Login = ({ onLogin }: { onLogin: (user: User) => void }) => {
         setError('ভুল ইউজারনেম অথবা পাসওয়ার্ড!');
       }
     } catch (err) {
-      setError('সার্ভারে সমস্যা হচ্ছে। পরে চেষ্টা করুন।');
+      console.error("Login error:", err);
+      setError('সার্ভারে সংযোগ করা যাচ্ছে না। আপনার ইন্টারনেট বা ডাটাবেস সেটিংস চেক করুন।');
     } finally {
       setLoading(false);
     }
