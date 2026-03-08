@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { 
   LayoutDashboard, 
   Package, 
@@ -14,6 +14,7 @@ import {
   Menu,
   X,
   ChevronRight,
+  ChevronDown,
   Search,
   LogOut,
   Eye,
@@ -2002,6 +2003,8 @@ export default function App() {
   const [activeTab, setActiveTab] = useState('dashboard');
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [showChangePassword, setShowChangePassword] = useState(false);
+  const [userMenuOpen, setUserMenuOpen] = useState(false);
+  const userMenuRef = useRef<HTMLDivElement>(null);
   const [products, setProducts] = useState<Product[]>([]);
   const [settings, setSettings] = useState<Settings>({ company_name: 'Saad Enterprise', address: '', logo_url: '' });
   const [masters, setMasters] = useState<MasterData>({ routes: [], srs: [], delivery_boys: [], vans: [] });
@@ -2022,6 +2025,16 @@ export default function App() {
 
   useEffect(() => {
     fetchData();
+  }, []);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (userMenuRef.current && !userMenuRef.current.contains(event.target as Node)) {
+        setUserMenuOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
   const navItems = [
@@ -2080,15 +2093,8 @@ export default function App() {
           </nav>
 
           <div className="p-4 border-t border-slate-100">
-            <button 
-              onClick={() => setUser(null)}
-              className="w-full flex items-center gap-3 px-4 py-3.5 text-slate-500 hover:text-red-600 transition-colors font-bold"
-            >
-              <LogOut size={22} />
-              {sidebarOpen && <span>লগআউট</span>}
-            </button>
             {sidebarOpen && (
-              <div className="mt-2 text-[10px] text-center text-slate-400 font-medium">
+              <div className="text-[10px] text-center text-slate-400 font-medium">
                 Powered by Mahfuzur
               </div>
             )}
@@ -2110,21 +2116,56 @@ export default function App() {
           </div>
 
           <div className="flex items-center gap-8">
-            <button 
-              onClick={() => setShowChangePassword(true)}
-              className="flex items-center gap-2 px-3 py-2 rounded-xl text-slate-500 hover:bg-slate-100 hover:text-indigo-600 transition-all font-bold text-sm"
-            >
-              <Lock size={18} />
-              <span>পাসওয়ার্ড পরিবর্তন</span>
-            </button>
-            <div className="flex items-center gap-4 pl-8 border-l border-slate-200">
-              <div className="text-right">
-                <div className="text-sm font-black text-slate-900">{user.full_name}</div>
-                <div className="text-[10px] font-bold text-indigo-500 uppercase tracking-widest">{user.role}</div>
-              </div>
-              <div className="w-12 h-12 bg-gradient-to-br from-slate-100 to-slate-200 rounded-2xl flex items-center justify-center font-black text-slate-600 shadow-inner border border-white">
-                {user.username.substring(0, 2).toUpperCase()}
-              </div>
+            <div className="relative" ref={userMenuRef}>
+              <button 
+                onClick={() => setUserMenuOpen(!userMenuOpen)}
+                className="flex items-center gap-4 pl-8 border-l border-slate-200 hover:bg-slate-50 p-2 rounded-2xl transition-all"
+              >
+                <div className="text-right hidden sm:block">
+                  <div className="text-sm font-black text-slate-900">{user.full_name}</div>
+                  <div className="text-[10px] font-bold text-indigo-500 uppercase tracking-widest">{user.role}</div>
+                </div>
+                <div className="w-12 h-12 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-2xl flex items-center justify-center font-black text-white shadow-lg shadow-indigo-100 border border-white">
+                  {user.username.substring(0, 2).toUpperCase()}
+                </div>
+                <ChevronDown size={18} className={cn("text-slate-400 transition-transform", userMenuOpen && "rotate-180")} />
+              </button>
+
+              <AnimatePresence>
+                {userMenuOpen && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    exit={{ opacity: 0, y: 10, scale: 0.95 }}
+                    className="absolute right-0 mt-2 w-64 bg-white rounded-2xl shadow-2xl border border-slate-100 overflow-hidden z-50"
+                  >
+                    <div className="p-4 border-b border-slate-50 bg-slate-50/50">
+                      <div className="font-bold text-slate-900">{user.full_name}</div>
+                      <div className="text-xs text-slate-500">{user.username}</div>
+                    </div>
+                    <div className="p-2">
+                      <button 
+                        onClick={() => {
+                          setShowChangePassword(true);
+                          setUserMenuOpen(false);
+                        }}
+                        className="w-full flex items-center gap-3 px-4 py-3 text-sm font-bold text-slate-600 hover:bg-indigo-50 hover:text-indigo-600 rounded-xl transition-all"
+                      >
+                        <Lock size={18} />
+                        পাসওয়ার্ড পরিবর্তন
+                      </button>
+                      <div className="h-px bg-slate-100 my-1 mx-2" />
+                      <button 
+                        onClick={() => setUser(null)}
+                        className="w-full flex items-center gap-3 px-4 py-3 text-sm font-bold text-red-600 hover:bg-red-50 rounded-xl transition-all"
+                      >
+                        <LogOut size={18} />
+                        লগআউট
+                      </button>
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
             </div>
           </div>
         </header>
